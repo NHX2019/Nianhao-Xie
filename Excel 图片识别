@@ -1,0 +1,121 @@
+Sub run_this_one()
+
+Application.ScreenUpdating = False
+Application.DisplayAlerts = False
+On Error Resume Next
+
+Dim os As Shape
+Dim oc As ChartObject
+Dim mypath, myname
+
+
+shtnum = Sheets.Count
+
+For snum = 1 To shtnum - 1
+
+Sheets("do_Not_delete").Columns("A:B").ClearContents
+
+Sheets(snum).Activate
+
+For Each os In ActiveSheet.Shapes
+    os.Copy
+    Set oc = ActiveSheet.ChartObjects.Add(0, 0, os.Width, os.Height)
+    oc.Select
+
+    With oc.Chart
+        .Paste
+        .Export ThisWorkbook.Path & "\" & os.Name & ".png"
+        .Parent.Delete
+    End With
+Next os
+
+
+Set os = Nothing
+Set oc = Nothing
+
+Call demo
+Call lqxs
+Call fmt
+
+
+mypath = ThisWorkbook.Path & "\"
+myname = Dir(mypath & "*.png")
+
+Do While myname <> ""
+  Kill mypath & myname
+  myname = Dir
+Loop
+
+Next snum
+
+Sheets("do_Not_delete").Columns("A:B").ClearContents
+
+Application.ScreenUpdating = True
+MsgBox ("Completed!")
+
+End Sub
+
+'----------------------------------------------------------------------------------------
+
+Private Sub fmt()
+
+lsr = ActiveSheet.Range("B50000").End(xlUp).Row
+
+For x = 1 To lsr
+    If Cells(x, 1) = "PROJECT" Then
+        Range(Cells(x + 1, 8), Cells(lsr, 8)) = Cells(x, 2) 
+    End If
+Next x
+
+For y = lsr + 10 To 1 Step -1
+    If Cells(y, 7) = "" Or Cells(y, 7) = "Hrs" Then
+      Rows(y).Delete
+    End If
+Next y
+
+Cells.UnMerge
+Range("H1:H10000").Copy
+Range("A1:A10000").PasteSpecial xlValues
+Columns(8).Delete
+Rows(1).Insert
+
+Range("A1:G1") = Array("Project", "Task", "Billable", "Employee", "Detail", "Date", "Hrs")
+
+End Sub
+
+'----------------------------------------------------------------------------------------
+Private Sub lqxs()
+
+Dim shp As Shape
+
+For Each shp In ActiveSheet.Shapes
+    ad = shp.TopLeftCell.Address
+    If Sheets("do_Not_delete").Cells.Find(shp.Name).Offset(0, 1) = 225 Then
+        Range(ad) = "Yes"
+    ElseIf Sheets("do_Not_delete").Cells.Find(shp.Name).Offset(0, 1) = 208 Then
+    Range(ad) = "No"
+    End If
+Next
+End Sub
+
+'----------------------------------------------------------------------------------------
+
+Private Sub demo()
+    Dim fs, ar(1 To 10000, 1 To 2), n
+    Set fso = CreateObject("scripting.filesystemobject")
+    Set fs = fso.GetFolder(ThisWorkbook.Path)
+    For Each fd In fs.subfolders
+        n = n + 1
+        ar(n, 1) = fd.Name
+        ar(n, 2) = Int(fd.Size / 102.4) / 10
+    Next
+    For Each fd In fs.Files
+        If Not (fd.Name Like "*" & ThisWorkbook.Name) Then
+            n = n + 1
+            ar(n, 1) = Split(fd.Name, ".")(0)
+            ar(n, 2) = Int(fd.Size)
+        End If
+    Next
+    Sheets("do_Not_delete").Range("a2").Resize(65535, 2).ClearContents
+    Sheets("do_Not_delete").Range("a2").Resize(n, 2) = ar
+End Sub
